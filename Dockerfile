@@ -5,7 +5,7 @@
 
 FROM python:3
 
-ENTRYPOINT [ "./slackbot.py" ]
+ENTRYPOINT [ "./slackernetes.py" ]
 # Avoid warnings by switching to noninteractive
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -32,4 +32,4 @@ RUN pip --disable-pip-version-check --no-cache-dir install -r /tmp/pip-tmp/requi
 ENV DEBIAN_FRONTEND=
 
 WORKDIR /app
-COPY slackbot.py /app
+COPY slackernetes.py /app

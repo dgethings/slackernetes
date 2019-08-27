@@ -1,9 +1,11 @@
 replicaCount: 1
 
 image:
-  repository: mobot
+  repository: slackernetes
   tag: latest
   pullPolicy: Never
+
+log_level: INFO
 
 resources: {}
   # We usually recommend not to specify default resources and to leave this as a conscious

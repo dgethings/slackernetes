@@ -1,19 +1,19 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "mobot.fullname" . }}
+  name: {{ include "slackernetes.fullname" . }}
   labels:
-{{ include "mobot.labels" . | indent 4 }}
+{{ include "slackernetes.labels" . | indent 4 }}
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
-      app.kubernetes.io/name: {{ include "mobot.name" . }}
+      app.kubernetes.io/name: {{ include "slackernetes.name" . }}
       app.kubernetes.io/instance: {{ .Release.Name }}
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: {{ include "mobot.name" . }}
+        app.kubernetes.io/name: {{ include "slackernetes.name" . }}
         app.kubernetes.io/instance: {{ .Release.Name }}
     spec:
       {{- with .Values.imagePullSecrets }}
@@ -42,9 +42,9 @@ spec:
           #     periodSeconds: 5
           env:
             - name: SLACK_API_TOKEN
-              value: xoxb-3761985377-713549102387-qniODs02AEVRQyqkwru3xqe6
+              value: {{ required "A Bot User OAuth Access Token must be supplied" .Values.bot_oauth_token }}
             - name: LOG_LEVEL
-              value: DEBUG
+              value: {{ .Values.log_level }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       {{- with .Values.nodeSelector }}
