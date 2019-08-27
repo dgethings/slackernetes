@@ -1,0 +1,17 @@
+version: 2.1
+orbs:
+  slack: circleci/slack@3.3.0
+jobs:
+  build:
+    docker:
+      - image: cibuilds/base:latest
+    steps:
+      - slack/notify:
+          color: '#42e2f4'
+          mentions: 'david.gethings'
+          message: This is a custom message notification
+          webhook: https://hooks.slack.com/services/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
+workflows:
+  your-workflow:
+    jobs:
+      - build

@@ -1,0 +1,2 @@
+slackclient>=2.1.0
+kubernetes>=10.0.0
