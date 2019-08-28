@@ -28,18 +28,20 @@ spec:
           #   - name: http
           #     containerPort: 80
           #     protocol: TCP
-          # livenessProbe:
-          #   exec:
-          #     command:
-          #       - pgrep -lf slackbot
-          #     initialDelaySeconds: 5
-          #     periodSeconds: 5
-          # readinessProbe:
-          #   exec:
-          #     command:
-          #       - pgrep -lf slackbot
-          #     initialDelaySeconds: 5
-          #     periodSeconds: 5
+          livenessProbe:
+            exec:
+              command:
+                - pgrep
+                - python
+              initialDelaySeconds: 5
+              periodSeconds: 5
+          readinessProbe:
+            exec:
+              command:
+                - pgrep
+                - python
+              initialDelaySeconds: 5
+              periodSeconds: 5
           env:
             - name: SLACK_API_TOKEN
               value: {{ required "A Bot User OAuth Access Token must be supplied" .Values.bot_oauth_token }}
