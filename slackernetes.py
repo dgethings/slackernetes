@@ -6,7 +6,7 @@ import kubernetes
 import re
 import functools
 
-logging.basicConfig(level=os.environ["LOG_LEVEL"])
+logging.basicConfig(level=os.environ.get("LOG_LEVEL", "INFO"))
 
 # kubernetes.config.load_kube_config(config_file="kube_config")
 kubernetes.config.load_incluster_config()
@@ -24,6 +24,17 @@ def register(regex):
         global COMMANDS
         COMMANDS[regex] = func
     return decorator_register
+
+@register(r"(?:get|list) images in namespace (\S+)")
+def list_images(**payload):
+    """
+    List images used in a namespace
+    """
+    namespace = re.search(payload['regex'], payload['data']['text']).group(1)
+    payload['web_client'].chat_postMessage(
+        channel=payload['data']['channel'],
+        text=f"Here are all the images in `{namespace}` I can find:\n" + "\n".join([ container.image for pod in k.list_namespaced_pod(namespace).items for container in pod.spec.containers ])
+    )
 
 @register(r"(help|(list|get) commands?)")
 def show_help(**payload):
