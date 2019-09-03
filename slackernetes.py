@@ -5,11 +5,13 @@ import logging
 import kubernetes
 import re
 import functools
+import time
+import atexit
 
 logging.basicConfig(level=os.environ.get("LOG_LEVEL", "INFO"))
 
-# kubernetes.config.load_kube_config(config_file="kube_config")
-kubernetes.config.load_incluster_config()
+kubernetes.config.load_kube_config(config_file="kube_config")
+# kubernetes.config.load_incluster_config()
 k = kubernetes.client.CoreV1Api()
 
 COMMANDS = dict()
@@ -133,10 +135,20 @@ def handle_message(**payload):
         return
 
     (regex, func) = next( ( (cmd, COMMANDS[cmd]) for cmd in COMMANDS if re.search(cmd, message['text'] ) ), (r".*", unsupported_command))
+    log_request(payload, func)
     payload['regex'] = regex
     func(**payload)
+
+def log_request(payload, func):
+    username = payload['web_client'].users_info(user=payload['data']['user'])
+    logging.info(f"slackernetes_request{{username=\"{username['user']['name']}\",function_name=\"{func.__name__}\"}} 1 {time.time()}")
+
+@atexit.register
+def log_timestamp():
+    logging.info(f'slackernetes_status{{state="stop"}} 1 {time.time()}')
 
 if __name__ == "__main__":
     slack_token = os.environ["SLACK_API_TOKEN"]
     rtm_client = slack.RTMClient(token=slack_token)
+    logging.info(f'slackernetes_status{{state="start"}} 1 {time.time()}')
     rtm_client.start()
