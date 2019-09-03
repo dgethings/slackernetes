@@ -4,7 +4,6 @@ import slack
 import logging
 import kubernetes
 import re
-import functools
 import time
 import atexit
 
