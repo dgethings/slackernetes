@@ -10,8 +10,8 @@ import atexit
 
 logging.basicConfig(level=os.environ.get("LOG_LEVEL", "INFO"))
 
-kubernetes.config.load_kube_config(config_file="kube_config")
-# kubernetes.config.load_incluster_config()
+# kubernetes.config.load_kube_config(config_file="kube_config")
+kubernetes.config.load_incluster_config()
 k = kubernetes.client.CoreV1Api()
 
 COMMANDS = dict()
