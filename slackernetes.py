@@ -9,8 +9,8 @@ import atexit
 
 logging.basicConfig(level=os.environ.get("LOG_LEVEL", "INFO"))
 
-# kubernetes.config.load_kube_config(config_file="kube_config")
-kubernetes.config.load_incluster_config()
+kubernetes.config.load_kube_config(config_file="kube_config")
+# kubernetes.config.load_incluster_config()
 k = kubernetes.client.CoreV1Api()
 
 COMMANDS = dict()
@@ -32,10 +32,8 @@ def list_images(**payload):
     List images used in a namespace
     """
     namespace = re.search(payload['regex'], payload['data']['text']).group(1)
-    payload['web_client'].chat_postMessage(
-        channel=payload['data']['channel'],
-        text=f"Here are all the images in `{namespace}` I can find:\n" + "\n".join([ container.image for pod in k.list_namespaced_pod(namespace).items for container in pod.spec.containers ])
-    )
+    message = f"Here are all the images in `{namespace}` I can find:\n" + "\n".join([ container.image for pod in k.list_namespaced_pod(namespace).items for container in pod.spec.containers ])
+    send_message(message, payload)
 
 @register(r"(help|(list|get) commands?)")
 def show_help(**payload):
@@ -43,11 +41,8 @@ def show_help(**payload):
     List all available commands
     """
     cmds = [ f"{regex}    {func.__doc__}" for regex, func in COMMANDS.items() ]
-    payload['web_client'].chat_postMessage(
-        channel=payload['data']['channel'],
-        text="Here are all the supported commands:\n" + "\n".join(cmds)
-    )
-
+    message = "Here are all the supported commands:\n" + "\n".join(cmds)
+    send_message(message, payload)
 
 @register(r"(?:get|list) pods? in namespace (\S+)$")
 def list_pods(**payload):
@@ -55,10 +50,8 @@ def list_pods(**payload):
     List all the Pods in a namespace
     """
     namespace = re.search(payload['regex'], payload['data']['text']).group(1)
-    payload['web_client'].chat_postMessage(
-        channel=payload['data']['channel'],
-        text=f"Here are all the pods in `{namespace}` I can find:\n" + "\n".join([ pod.metadata.name for pod in k.list_namespaced_pod(namespace).items ])
-    )
+    message = f"Here are all the pods in `{namespace}` I can find:\n" + "\n".join([ pod.metadata.name for pod in k.list_namespaced_pod(namespace).items ])
+    send_message(message, payload)
 
 @register(r"(?:get|list) pods?$")
 def list_all_pods(**payload):
@@ -66,10 +59,8 @@ def list_all_pods(**payload):
     List all the Pods in a cluster
     """
     pod_list = [ pod.metadata.name for pod in k.list_pod_for_all_namespaces(watch=False).items ]
-    payload['web_client'].chat_postMessage(
-        channel=payload['data']['channel'],
-        text="Here are all the pods I can find:\n" + "\n".join(pod_list)
-    )
+    message = "Here are all the pods I can find:\n" + "\n".join(pod_list)
+    send_message(message, payload)
 
 @register(r"(?:get|list) logs? for pod (\S+)$")
 def pod_logs(**payload):
@@ -79,25 +70,21 @@ def pod_logs(**payload):
     pod_name = re.search(payload['regex'], payload['data']['text']).group(1)
     pod = next (( pod for pod in k.list_pod_for_all_namespaces(watch=False).items if pod_name in pod.metadata.name), None)
     logging.debug(f"found this pod: {pod}")
-    payload['web_client'].files_upload(
-        channels=payload['data']['channel'],
-        initial_comment=f"Here are the logs from `{pod_name}`",
-        content=k.read_namespaced_pod_log(pod_name, pod.metadata.namespace)
-    )
+    message = f"Here are the logs from `{pod_name}`",
+    file = k.read_namespaced_pod_log(pod_name, pod.metadata.namespace)
+    send_file(message, file, payload)
 
 @register(r"(?:get|list) previous logs? for pod (\S+)$")
-def pod_logs(**payload):
+def previous_pod_logs(**payload):
     """
     Get logs for a previous instance of a given pod
     """
     pod_name = re.search(payload['regex'], payload['data']['text']).group(1)
     pod = next (( pod for pod in k.list_pod_for_all_namespaces(watch=False).items if pod_name in pod.metadata.name), None)
     logging.debug(f"found this pod: {pod}")
-    payload['web_client'].files_upload(
-        channels=payload['data']['channel'],
-        initial_comment=f"Here are the logs from `{pod_name}`",
-        content=k.read_namespaced_pod_log(pod_name, pod.metadata.namespace, previous=True)
-    )
+    message = f"Here are the logs from `{pod_name}`",
+    file = k.read_namespaced_pod_log(pod_name, pod.metadata.namespace, previous=True)
+    send_file(message, file, payload)
 
 @register(r"(get|list) namespaces$")
 def list_namespaces(**payload):
@@ -105,10 +92,8 @@ def list_namespaces(**payload):
     List all namespaces in a cluster.
     """
     ns_list = [ ns.metadata.name for ns in k.list_namespace().items ]
-    payload['web_client'].chat_postMessage(
-        channel=payload['data']['channel'],
-        text="Here are all the namespaces I can find:\n" + "\n".join(ns_list)
-    )
+    message = "Here are all the namespaces I can find:\n" + "\n".join(ns_list)
+    send_message(message, payload)
 
 @register(r"describe pod (.+)")
 def describe_pod(**payload):
@@ -118,28 +103,46 @@ def describe_pod(**payload):
     pod_name = re.search(payload['regex'], payload['data']['text']).group(1)
     pod = next (( pod for pod in k.list_pod_for_all_namespaces(watch=False).items if pod_name in pod.metadata.name), None)
     logging.debug(f"found this pod: {pod}")
-    payload['web_client'].files_upload(
-        channels=payload['data']['channel'],
-        initial_comment=f"Here is the description for pod {pod_name}",
-        content=k.read_namespaced_pod(pod_name, pod.metadata.namespace, pretty="true")
-    )
+    message = f"Here is the description for pod {pod_name}",
+    file = k.read_namespaced_pod(pod_name, pod.metadata.namespace, pretty="true")
+    send_file(message, file, payload)
 
 def unsupported_command(**payload):
     """
     Gracefully handle unknown commands
     """
     logging.debug(f"the message text not currently handled: {payload['data']['text']}")
-    payload['web_client'].chat_postMessage(
-        channel=payload['data']['channel'],
-        text=f"Sorry, I don't understand: {payload['data']['text']}"
-    )
+    message = f"Sorry, I don't understand: {payload['data']['text']}"
+    send_message(message, payload)
 
 def for_bot(message):
+    """
+    Check if message is for the bot
+    """
     global MY_ID
     if re.search(r"^<@" + re.escape(MY_ID) + r">.+", message.get('text')):
         return True
     else:
         return False
+
+def send_message(message, payload):
+    """
+    Send a message to the channel
+    """
+    payload['web_client'].chat_postMessage(
+        channel=payload['data']['channel'],
+        text=message
+    )
+
+def send_file(message, file, payload):
+    """
+    Send a message with a file to the channel
+    """
+    payload['web_client'].files_upload(
+        channels=payload['data']['channel'],
+        initial_comment=message,
+        content=file
+    )
 
 @slack.RTMClient.run_on(event="open")
 def get_my_id(**payload):
