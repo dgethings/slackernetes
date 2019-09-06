@@ -9,8 +9,11 @@ import atexit
 
 logging.basicConfig(level=os.environ.get("LOG_LEVEL", "INFO"))
 
-kubernetes.config.load_kube_config(config_file="kube_config")
-# kubernetes.config.load_incluster_config()
+try:
+    kubernetes.config.load_incluster_config()
+except kubernetes.config.config_exception.ConfigException as e:
+    kubernetes.config.load_kube_config(config_file="kube_config")
+
 k = kubernetes.client.CoreV1Api()
 
 COMMANDS = dict()
