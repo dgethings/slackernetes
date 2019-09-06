@@ -12,6 +12,7 @@ logging.basicConfig(level=os.environ.get("LOG_LEVEL", "INFO"))
 try:
     kubernetes.config.load_incluster_config()
 except kubernetes.config.config_exception.ConfigException as e:
+    logging.debug("No in cluster config found. Trying to load config from ./kube_config...")
     kubernetes.config.load_kube_config(config_file="kube_config")
 
 k = kubernetes.client.CoreV1Api()
