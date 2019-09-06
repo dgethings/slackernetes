@@ -9,8 +9,8 @@ import atexit
 
 logging.basicConfig(level=os.environ.get("LOG_LEVEL", "INFO"))
 
-# kubernetes.config.load_kube_config(config_file="kube_config")
-kubernetes.config.load_incluster_config()
+kubernetes.config.load_kube_config(config_file="kube_config")
+# kubernetes.config.load_incluster_config()
 k = kubernetes.client.CoreV1Api()
 
 COMMANDS = dict()
@@ -96,6 +96,20 @@ def list_namespaces(**payload):
         text="Here are all the namespaces I can find:\n" + "\n".join(ns_list)
     )
 
+@register(r"describe pod (.+)")
+def describe_pod(**payload):
+    """
+    Get details about a pod include env vars and other useful info
+    """
+    pod_name = re.search(payload['regex'], payload['data']['text']).group(1)
+    pod = next (( pod for pod in k.list_pod_for_all_namespaces(watch=False).items if pod_name in pod.metadata.name), None)
+    logging.debug(f"found this pod: {pod}")
+    payload['web_client'].files_upload(
+        channels=payload['data']['channel'],
+        initial_comment=f"Here is the description for pod {pod_name}",
+        content=k.read_namespaced_pod(pod_name, pod.metadata.namespace, pretty="true")
+    )
+
 def unsupported_command(**payload):
     """
     Gracefully handle unknown commands
@@ -139,11 +153,14 @@ def handle_message(**payload):
     func(**payload)
 
 def log_request(payload, func):
-    username = payload['web_client'].users_info(user=payload['data']['user'])
-    logging.info(f"slackernetes_request{{username=\"{username['user']['name']}\",function_name=\"{func.__name__}\"}} 1 {time.time()}")
+    web_client = payload['web_client']
+    username = web_client.users_info(user=payload['data']['user'])
+    channel = web_client.channels_info(channel=payload['data']['channel'])
+    message = re.search(r"^<@" + re.escape(MY_ID) + r"> (.*)", payload['data']['text']).group(1)
+    logging.info(f"slackernetes_request{{username=\"{username['user']['name']}\",function_name=\"{func.__name__}\",channel=\"{channel.data['channel']['name']}\",message=\"{message}\"}} 1 {time.time()}")
 
 @atexit.register
-def log_timestamp():
+def log_app_stop():
     logging.info(f'slackernetes_status{{state="stop"}} 1 {time.time()}')
 
 if __name__ == "__main__":
