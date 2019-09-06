@@ -1,7 +1,7 @@
 FROM python:3-alpine
 
 WORKDIR /app
-ENTRYPOINT [ "./slackernetes.py" ]
+ENTRYPOINT [ "./slack_bot.py" ]
 
 # Or your actual UID, GID on Linux if not the default 1000
 ARG USERNAME=vscode
@@ -17,4 +17,4 @@ RUN pip --disable-pip-version-check --no-cache-dir install -r /tmp/pip-tmp/requi
     # && groupadd --gid $USER_GID $USERNAME \
     # && useradd -s /bin/bash --uid $USER_UID --gid $USER_GID -m $USERNAME
 
-COPY slackernetes.py /app
+COPY slackernetes.py slack_bot.py /app
