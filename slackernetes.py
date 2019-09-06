@@ -9,8 +9,8 @@ import atexit
 
 logging.basicConfig(level=os.environ.get("LOG_LEVEL", "INFO"))
 
-kubernetes.config.load_kube_config(config_file="kube_config")
-# kubernetes.config.load_incluster_config()
+# kubernetes.config.load_kube_config(config_file="kube_config")
+kubernetes.config.load_incluster_config()
 k = kubernetes.client.CoreV1Api()
 
 COMMANDS = dict()
@@ -83,6 +83,20 @@ def pod_logs(**payload):
         channels=payload['data']['channel'],
         initial_comment=f"Here are the logs from `{pod_name}`",
         content=k.read_namespaced_pod_log(pod_name, pod.metadata.namespace)
+    )
+
+@register(r"(?:get|list) previous logs? for pod (\S+)$")
+def pod_logs(**payload):
+    """
+    Get logs for a previous instance of a given pod
+    """
+    pod_name = re.search(payload['regex'], payload['data']['text']).group(1)
+    pod = next (( pod for pod in k.list_pod_for_all_namespaces(watch=False).items if pod_name in pod.metadata.name), None)
+    logging.debug(f"found this pod: {pod}")
+    payload['web_client'].files_upload(
+        channels=payload['data']['channel'],
+        initial_comment=f"Here are the logs from `{pod_name}`",
+        content=k.read_namespaced_pod_log(pod_name, pod.metadata.namespace, previous=True)
     )
 
 @register(r"(get|list) namespaces$")
