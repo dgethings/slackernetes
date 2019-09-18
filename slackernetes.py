@@ -105,7 +105,7 @@ def handle_message(**payload):
 def log_request(payload, func):
     web_client = payload['web_client']
     username = web_client.users_info(user=payload['data']['user'])
-    channel = web_client.channels_info(channel=payload['data']['channel'])
+    channel = web_client.conversations_info(channel=payload['data']['channel'])
     message = re.search(r"^<@" + re.escape(MY_ID) + r"> (.*)", payload['data']['text']).group(1)
     logging.info(f"slackernetes_request{{username=\"{username['user']['name']}\",function_name=\"{func.__name__}\",channel=\"{channel.data['channel']['name']}\",message=\"{message}\"}} 1 {time.time()}")
 
