@@ -1,9 +1,9 @@
 replicaCount: 1
 
 image:
-  repository: slackernetes
-  tag: latest
-  pullPolicy: Never
+  repository: dgethings/slackernetes
+  tag: 0.1.1
+  pullPolicy: IfNotPresent
 
 log_level: INFO
 
