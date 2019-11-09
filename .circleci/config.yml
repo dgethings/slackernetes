@@ -1,17 +1,29 @@
-version: 2.1
+version: "2.1"
 orbs:
-  slack: circleci/slack@3.3.0
-jobs:
-  build:
-    docker:
-      - image: cibuilds/base:latest
-    steps:
-      - slack/notify:
-          color: '#42e2f4'
-          mentions: 'david.gethings'
-          message: This is a custom message notification
-          webhook: https://hooks.slack.com/services/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
+  docker: circleci/docker@0.5.13
+
 workflows:
-  your-workflow:
+  build-and-publish-docker-image:
     jobs:
-      - build
+      - docker/publish:
+          before_build:
+            - run:
+                name: set image tag 
+                command: |
+                  if [[ -v CIRCLE_TAG ]]; then
+                    echo 'export IMAGE_TAG=$(echo $CIRCLE_TAG | tr -d v)' >> $BASH_ENV
+                  else
+                    echo 'export IMAGE_TAG=$CIRCLE_BRANCH' >> $BASH_ENV
+                  fi
+          lint-dockerfile: true
+          image: $CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME
+          tag: $IMAGE_TAG
+          registry: $DOCKER_REGISTRY
+          docker-username: DOCKER_USER
+          docker-password: DOCKER_PASSWORD
+          filters:
+            tags:
+              only: /.*/
+            branches:
+              ignore:
+                - master
